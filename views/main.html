@@ -7,6 +7,21 @@
 		<link rel="stylesheet" type="text/css" href="styles/styles.css" media="screen">
 	</head>
 	<body>
+		<div id="container">
+		    <div class="select">
+		        <label for="audioSource">Audio input source: </label><select id="audioSource"></select>
+		    </div>
+		    <br />
+		    <div class="select">
+		        <label for="audioOutput">Audio output destination: </label><select id="audioOutput"></select>
+		    </div>
+		    <br />
+		    <div class="select">
+		        <label for="videoSource">Video source: </label><select id="videoSource"></select>
+		    </div>
+		    <br />
+		    <video id="video" playsinline autoplay></video>
+		</div>
 	</body>
 	<script type="text/javascript" src="js/main.js"></script>
 </html>
