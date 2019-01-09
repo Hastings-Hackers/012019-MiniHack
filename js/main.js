@@ -2,7 +2,8 @@
 
 const width = 640;
 const height = 480;
-const block = 8;
+// const block = [8, 16, 32, 64][Math.floor(Math.random() * 4)];
+const block = 16;
 const fuzzThreshold = 0.7;
 
 const framesPerSecond = 25;
