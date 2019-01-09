@@ -1,12 +1,16 @@
 'use strict';
 
 const videoElement = document.querySelector('video');
-const canvasElement = document.querySelector('canvas');
+const canvasElement = document.getElementById('canvas');
+const modifiedCanvasElement = document.getElementById('modified-canvas');
 const audioInputSelect = document.querySelector('select#audioSource');
 const audioOutputSelect = document.querySelector('select#audioOutput');
 const videoSelect = document.querySelector('select#videoSource');
 const selectors = [audioInputSelect, audioOutputSelect, videoSelect];
 const context = canvasElement.getContext('2d');
+const modifiedContext = modifiedCanvasElement.getContext('2d');
+
+let block = 16;
 
 let renderTimer = null;
 
@@ -77,6 +81,9 @@ function gotStream(stream) {
   window.stream = stream; // make stream available to console
   videoElement.srcObject = stream;
 
+ var blocksX = Math.ceil(videoElement.width/block);
+ var blocksY = Math.ceil(videoElement.height/block);
+
     if (renderTimer) {
     clearInterval(renderTimer);
   }
@@ -84,11 +91,46 @@ function gotStream(stream) {
   renderTimer = setInterval(function() {
     try {
       context.drawImage(videoElement, 0, 0, videoElement.width, videoElement.height);
-      // options.onFrame(canvas);
+
+        for (let i=0; i<blocksX; i++) {
+          for (let j=0; j<blocksY; j++) {
+            let imageData = context.getImageData((i*block), (j*block), block, block);
+
+            let r = 0;
+            let g = 0;
+            let b = 0;
+            let a = 0;
+
+             for (let k=0; k<imageData.data.length; k+=4) {
+                r += imageData.data[k];
+                g += imageData.data[k+1];
+                b += imageData.data[k+2];
+                a += imageData.data[k+3];
+             } 
+
+             //average
+
+             r = r/(block*block);
+             g = g/(block*block);
+             b = b/(block*block);
+             a = a/(block*block);
+
+             let newImageData = [];
+
+             for (let k=0; k<imageData.data.length; k+=4) {
+              newImageData[k] = r;
+              newImageData[k+1] = g;
+              newImageData[k+2] = b;
+              newImageData[k+3] = a;
+             } 
+
+              modifiedContext.putImageData(new ImageData(new Uint8ClampedArray(newImageData), block, block), (i*block), (j*block));
+          }
+        }   
     } catch (e) {
       console.error(e);
     }
-  }, Math.round(1000 / 25));
+  }, Math.round(1000 / 10));
 
   // Refresh button list in case labels have become available
   return navigator.mediaDevices.enumerateDevices();
@@ -111,7 +153,7 @@ function start() {
 
   const constraints = {
     audio: {deviceId: audioSource ? {exact: audioSource} : undefined},
-    video: {deviceId: videoSource ? {exact: videoSource} : undefined}
+    video: {deviceId: videoSource ? {exact: videoSource} : undefined, width: { exact: 640 }, height: { exact: 640 }}
   };
 
   navigator.mediaDevices.getUserMedia(constraints).then(gotStream).then(gotDevices).catch(handleError);
