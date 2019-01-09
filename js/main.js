@@ -1,80 +1,79 @@
 'use strict';
 
-const videoElement = document.querySelector('video');
-const canvasElement = document.getElementById('canvas');
-const modifiedCanvasElement = document.getElementById('modified-canvas');
-const audioInputSelect = document.querySelector('select#audioSource');
-const audioOutputSelect = document.querySelector('select#audioOutput');
-const videoSelect = document.querySelector('select#videoSource');
-const selectors = [audioInputSelect, audioOutputSelect, videoSelect];
-const context = canvasElement.getContext('2d');
-const modifiedContext = modifiedCanvasElement.getContext('2d');
+const width = 640;
+const height = 480;
+const block = 16;
 
-let block = 16;
+const videoElement = document.querySelector('video');
+const videoCanvasElement = document.querySelector('#video-canvas');
+const pixelCanvasElement = document.querySelector('#pixel-canvas');
+
+videoElement.height=height
+videoElement.width=width
+
+videoCanvasElement.height=height
+videoCanvasElement.width=width
+
+pixelCanvasElement.height=height
+pixelCanvasElement.width=width
+
+const videoSelect = document.querySelector('select#videoSource');
+const videoContext = videoCanvasElement.getContext('2d');
+const pixelContext = pixelCanvasElement.getContext('2d');
 
 let renderTimer = null;
 
-audioOutputSelect.disabled = !('sinkId' in HTMLMediaElement.prototype);
-
 function gotDevices(deviceInfos) {
-  // Handles being called several times to update labels. Preserve values.
-  const values = selectors.map(select => select.value);
-  selectors.forEach(select => {
-    while (select.firstChild) {
-      select.removeChild(select.firstChild);
-    }
-  });
+  const value = videoSelect.value;
+
+  while (videoSelect.firstChild) {
+    videoSelect.removeChild(videoSelect.firstChild);
+  }
+
   for (let i = 0; i !== deviceInfos.length; ++i) {
     const deviceInfo = deviceInfos[i];
     const option = document.createElement('option');
     option.value = deviceInfo.deviceId;
-    if (deviceInfo.kind === 'audioinput') {
-      option.text = deviceInfo.label || `microphone ${audioInputSelect.length + 1}`;
-      audioInputSelect.appendChild(option);
-    } else if (deviceInfo.kind === 'audiooutput') {
-      option.text = deviceInfo.label || `speaker ${audioOutputSelect.length + 1}`;
-      audioOutputSelect.appendChild(option);
-    } else if (deviceInfo.kind === 'videoinput') {
+    if (deviceInfo.kind === 'videoinput') {
       option.text = deviceInfo.label || `camera ${videoSelect.length + 1}`;
       videoSelect.appendChild(option);
-    } else {
-      console.log('Some other kind of source/device: ', deviceInfo);
     }
   }
-  selectors.forEach((select, selectorIndex) => {
-    if (Array.prototype.slice.call(select.childNodes).some(n => n.value === values[selectorIndex])) {
-      select.value = values[selectorIndex];
-    }
-  });
+
+  videoSelect.value = value;
 }
 
 navigator.mediaDevices.enumerateDevices().then(gotDevices).catch(handleError);
 
-// Attach audio output device to video element using device/sink ID.
-function attachSinkId(element, sinkId) {
-  if (typeof element.sinkId !== 'undefined') {
-    element.setSinkId(sinkId)
-      .then(() => {
-        console.log(`Success, audio output device attached: ${sinkId}`);
-      })
-      .catch(error => {
-        let errorMessage = error;
-        if (error.name === 'SecurityError') {
-          errorMessage = `You need to use HTTPS for selecting audio output device: ${error}`;
-        }
-        console.error(errorMessage);
-        // Jump back to first output device in the list as it's the default.
-        audioOutputSelect.selectedIndex = 0;
-      });
-  }
-  else {
-    console.warn('Browser does not support output device selection.');
-  }
+function getColorAtOffset(data, offset) {
+  return {
+    red: data[offset],
+    green: data[offset + 1],
+    blue: data[offset + 2],
+    alpha: data[offset + 3]
+  };
 }
 
-function changeAudioDestination() {
-  const audioDestination = audioOutputSelect.value;
-  attachSinkId(videoElement, audioDestination);
+function meanColor(colors) {
+  const count = colors.length;
+  const avg = {
+    red: 0,
+    green: 0,
+    blue: 0,
+    alpha: 0
+  };
+
+  for(let i = 0; i < count; i++) {
+    avg.red += colour[i].red;
+    avg.green += colour[i].green;
+    avg.blue += colour[i].blue;
+    avg.alpha += colour[i].alpha;
+  }
+
+  avg.red = avg.red / count;
+  avg.green = avg.green / count;
+  avg.blue = avg.blue / count;
+  avg.alpha = avg.alpha  / count;
 }
 
 function gotStream(stream) {
@@ -90,11 +89,11 @@ function gotStream(stream) {
 
   renderTimer = setInterval(function() {
     try {
-      context.drawImage(videoElement, 0, 0, videoElement.width, videoElement.height);
+      videoContext.drawImage(videoElement, 0, 0, width, height);
 
         for (let i=0; i<blocksX; i++) {
           for (let j=0; j<blocksY; j++) {
-            let imageData = context.getImageData((i*block), (j*block), block, block);
+            let imageData = videoContext.getImageData((i*block), (j*block), block, block);
 
             let r = 0;
             let g = 0;
@@ -106,7 +105,7 @@ function gotStream(stream) {
                 g += imageData.data[k+1];
                 b += imageData.data[k+2];
                 a += imageData.data[k+3];
-             } 
+             }
 
              //average
 
@@ -122,15 +121,15 @@ function gotStream(stream) {
               newImageData[k+1] = g;
               newImageData[k+2] = b;
               newImageData[k+3] = a;
-             } 
+             }
 
-              modifiedContext.putImageData(new ImageData(new Uint8ClampedArray(newImageData), block, block), (i*block), (j*block));
+             pixelContext.putImageData(new ImageData(new Uint8ClampedArray(newImageData), block, block), (i*block), (j*block));
           }
-        }   
+        }
     } catch (e) {
       console.error(e);
     }
-  }, Math.round(1000 / 10));
+  }, Math.round(1000 / 25));
 
   // Refresh button list in case labels have become available
   return navigator.mediaDevices.enumerateDevices();
@@ -147,21 +146,19 @@ function start() {
     });
   }
 
-  const audioSource = audioInputSelect.value;
-
   const videoSource = videoSelect.value;
 
   const constraints = {
-    audio: {deviceId: audioSource ? {exact: audioSource} : undefined},
-    video: {deviceId: videoSource ? {exact: videoSource} : undefined, width: { exact: 640 }, height: { exact: 640 }}
+    video: {
+      deviceId: videoSource ? {exact: videoSource} : undefined,
+      width: {exact: 640},
+      height: {exact: 480}
+    }
   };
+
+  console.log(constraints);
 
   navigator.mediaDevices.getUserMedia(constraints).then(gotStream).then(gotDevices).catch(handleError);
 }
 
-audioInputSelect.onchange = start;
-audioOutputSelect.onchange = changeAudioDestination;
-
 videoSelect.onchange = start;
-
-start();

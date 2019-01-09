@@ -9,20 +9,12 @@
     <body>
         <div id="container">
             <div class="select">
-                <label for="audioSource">Audio input source: </label><select id="audioSource"></select>
-            </div>
-            <br />
-            <div class="select">
-                <label for="audioOutput">Audio output destination: </label><select id="audioOutput"></select>
-            </div>
-            <br />
-            <div class="select">
                 <label for="videoSource">Video source: </label><select id="videoSource"></select>
             </div>
             <br />
-            <video id="video" playsinline autoplay height="480" width="640" style="display: none;"></video>
-            <canvas id="canvas" height="480" width=Wcanvas style="display: none;"></canvas>
-            <canvas id="modified-canvas" height="480" width=Wcanvas></canvas>
+            <video id="video" playsinline autoplay></video>
+            <canvas id="video-canvas"></canvas>
+            <canvas id="pixel-canvas"></canvas>
         </div>
     </body>
     <script type="text/javascript" src="js/main.js"></script>
