@@ -1,10 +1,14 @@
 'use strict';
 
 const videoElement = document.querySelector('video');
+const canvasElement = document.querySelector('canvas');
 const audioInputSelect = document.querySelector('select#audioSource');
 const audioOutputSelect = document.querySelector('select#audioOutput');
 const videoSelect = document.querySelector('select#videoSource');
 const selectors = [audioInputSelect, audioOutputSelect, videoSelect];
+const context = canvasElement.getContext('2d');
+
+let renderTimer = null;
 
 audioOutputSelect.disabled = !('sinkId' in HTMLMediaElement.prototype);
 
@@ -58,7 +62,7 @@ function attachSinkId(element, sinkId) {
         // Jump back to first output device in the list as it's the default.
         audioOutputSelect.selectedIndex = 0;
       });
-  } 
+  }
   else {
     console.warn('Browser does not support output device selection.');
   }
@@ -72,7 +76,20 @@ function changeAudioDestination() {
 function gotStream(stream) {
   window.stream = stream; // make stream available to console
   videoElement.srcObject = stream;
-  
+
+    if (renderTimer) {
+    clearInterval(renderTimer);
+  }
+
+  renderTimer = setInterval(function() {
+    try {
+      context.drawImage(videoElement, 0, 0, videoElement.width, videoElement.height);
+      // options.onFrame(canvas);
+    } catch (e) {
+      console.error(e);
+    }
+  }, Math.round(1000 / 25));
+
   // Refresh button list in case labels have become available
   return navigator.mediaDevices.enumerateDevices();
 }
