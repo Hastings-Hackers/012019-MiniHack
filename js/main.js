@@ -2,7 +2,8 @@
 
 const width = 640;
 const height = 480;
-const block = 16;
+const block = 8;
+const fuzzThreshold = 0.7;
 
 const framesPerSecond = 25;
 const videoRefresh = Math.round(1000 / framesPerSecond)
@@ -106,10 +107,11 @@ function gotStream(stream) {
         let newImageData = [];
 
         for (let k = 0; k < imageData.data.length; k += 4) {
+          let rand = Math.random()
           newImageData[k] = r;
           newImageData[k + 1] = g;
           newImageData[k + 2] = b;
-          newImageData[k + 3] = a;
+          newImageData[k + 3] = rand > fuzzThreshold ? rand * 255 : a
         }
 
         pixelContext.putImageData(new ImageData(new Uint8ClampedArray(newImageData), block, block), (i * block), (j * block));
