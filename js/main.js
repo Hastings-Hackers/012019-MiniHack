@@ -4,6 +4,14 @@ const width = 640;
 const height = 480;
 const block = 16;
 
+const framesPerSecond = 25;
+const videoRefresh = Math.round(1000 / framesPerSecond)
+
+const lines = height/block;
+const timePerRedraw = 1000 / lines;
+const redrawsPerSecond = 5;
+const pixelRefresh = Math.round(timePerRedraw / redrawsPerSecond);
+
 const videoElement = document.querySelector('video');
 const videoCanvasElement = document.querySelector('#video-canvas');
 const pixelCanvasElement = document.querySelector('#pixel-canvas');
@@ -21,7 +29,8 @@ const videoSelect = document.querySelector('select#videoSource');
 const videoContext = videoCanvasElement.getContext('2d');
 const pixelContext = pixelCanvasElement.getContext('2d');
 
-let renderTimer = null;
+let videoRenderTimer = null;
+let pixelRenderTimer = null;
 
 function gotDevices(deviceInfos) {
   const value = videoSelect.value;
@@ -52,15 +61,26 @@ function gotStream(stream) {
   var blocksX = Math.ceil(videoElement.width / block);
   var blocksY = Math.ceil(videoElement.height / block);
 
-  if (renderTimer) {
-    clearInterval(renderTimer);
+  if (videoRenderTimer) {
+    clearInterval(videoRenderTimer);
+  }
+
+  if (pixelRenderTimer) {
+    clearInterval(pixelRenderTimer);
   }
 
   let j = 0
 
-  renderTimer = setInterval(function () {
+  videoRenderTimer = setInterval(function () {
     try {
       videoContext.drawImage(videoElement, 0, 0, width, height);
+    } catch (e) {
+      console.error(e);
+    }
+  }, videoRefresh);
+
+  pixelRenderTimer = setInterval(function () {
+    try {
       for (let i = 0; i < blocksX; i++) {
         let imageData = videoContext.getImageData((i * block), (j * block), block, block);
 
@@ -103,7 +123,7 @@ function gotStream(stream) {
     } catch (e) {
       console.error(e);
     }
-  }, Math.round(1000 / 25));
+  }, pixelRefresh);
 
   // Refresh button list in case labels have become available
   return navigator.mediaDevices.enumerateDevices();
@@ -135,8 +155,6 @@ function start() {
       }
     }
   };
-
-  console.log(constraints);
 
   navigator.mediaDevices.getUserMedia(constraints).then(gotStream).then(gotDevices).catch(handleError);
 }
