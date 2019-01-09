@@ -12,7 +12,7 @@ const modifiedContext = modifiedCanvasElement.getContext('2d');
 
 const block = 8;
 const chunks = block*block;
-
+const blocks = (1280/block)*(720/block);
 
 let renderTimer = null;
 
@@ -137,7 +137,7 @@ function gotStream(stream) {
     } catch (e) {
       console.error(e);
     }
-  }, Math.round(1));
+  }, Math.round(1000/blocks));
 
   // Refresh button list in case labels have become available
   return navigator.mediaDevices.enumerateDevices();
