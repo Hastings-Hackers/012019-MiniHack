@@ -10,7 +10,9 @@ const selectors = [audioInputSelect, audioOutputSelect, videoSelect];
 const context = canvasElement.getContext('2d');
 const modifiedContext = modifiedCanvasElement.getContext('2d');
 
-let block = 16;
+const block = 8;
+const chunks = block*block;
+
 
 let renderTimer = null;
 
@@ -84,16 +86,20 @@ function gotStream(stream) {
  var blocksX = Math.ceil(videoElement.width/block);
  var blocksY = Math.ceil(videoElement.height/block);
 
+
+
     if (renderTimer) {
     clearInterval(renderTimer);
   }
+
+  let i=0
+  let j=0
 
   renderTimer = setInterval(function() {
     try {
       context.drawImage(videoElement, 0, 0, videoElement.width, videoElement.height);
 
-        for (let i=0; i<blocksX; i++) {
-          for (let j=0; j<blocksY; j++) {
+
             let imageData = context.getImageData((i*block), (j*block), block, block);
 
             let r = 0;
@@ -110,10 +116,10 @@ function gotStream(stream) {
 
              //average
 
-             r = r/(block*block);
-             g = g/(block*block);
-             b = b/(block*block);
-             a = a/(block*block);
+             r = r/chunks;
+             g = g/chunks;
+             b = b/chunks;
+             a = a/chunks;
 
              let newImageData = [];
 
@@ -125,12 +131,13 @@ function gotStream(stream) {
              } 
 
               modifiedContext.putImageData(new ImageData(new Uint8ClampedArray(newImageData), block, block), (i*block), (j*block));
-          }
-        }   
+          
+        if (i<blocksX) {i++} else {i=0}
+        if (j<blocksY) {j++} else { j=0 }
     } catch (e) {
       console.error(e);
     }
-  }, Math.round(1000 / 10));
+  }, Math.round(1));
 
   // Refresh button list in case labels have become available
   return navigator.mediaDevices.enumerateDevices();
@@ -152,7 +159,6 @@ function start() {
   const videoSource = videoSelect.value;
 
   const constraints = {
-    audio: {deviceId: audioSource ? {exact: audioSource} : undefined},
     video: {deviceId: videoSource ? {exact: videoSource} : undefined, width: { exact: 640 }, height: { exact: 640 }}
   };
 
